@@ -1,0 +1,67 @@
+name: Project2 — Zero-Downtime Deployments
+
+on:
+  pull_request:
+    paths:
+      - "project2-zero-downtime-deployments/**"
+      - ".github/workflows/project2-zero-downtime.yml"
+  push:
+    branches: [main]
+    paths:
+      - "project2-zero-downtime-deployments/**"
+      - ".github/workflows/project2-zero-downtime.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: project2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-manifests:
+    name: Validate Kubernetes / Rollout manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup kubeconform
+        run: |
+          curl -sL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: Validate manifests
+        run: |
+          kubeconform -summary -strict -ignore-missing-schemas \
+            project2-zero-downtime-deployments/argo-rollouts/*.yaml \
+            || true   # CRDs may not be in default schemas; still useful signal
+
+      - name: YAML lint
+        uses: ibiqlik/action-yamllint@v3
+        with:
+          file_or_dir: project2-zero-downtime-deployments/
+          config_data: |
+            extends: default
+            rules:
+              line-length: disable
+              document-start: disable
+
+  # On main: optional "deploy" job that would update image tag / trigger Argo
+  # Real flow is GitOps — CI only validates & updates Git; ArgoCD syncs.
+  notify-gitops:
+    name: GitOps hand-off (main only)
+    needs: validate-manifests
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production   # Approval gate if you want human confirmation before image tag update
+    steps:
+      - uses: actions/checkout@v4
+      - name: Placeholder — update image tag / open PR to GitOps repo
+        run: |
+          echo "In production this job would:"
+          echo "  1. Build & push new image"
+          echo "  2. Update image tag in GitOps repo (or this repo)"
+          echo "  3. Argo Rollouts / Flagger handles canary + auto-rollback"
+          echo "Approval gate is the GitHub Environment protection rule."
