@@ -1,0 +1,17 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: slo-rules
+  namespace: monitoring
+spec:
+  groups:
+    - name: slo
+      rules:
+        - alert: ErrorBudgetBurn
+          expr: |
+            (1 - (sum(rate(http_requests_total{status!~"5.."}[1h])) / sum(rate(http_requests_total[1h])))) > 0.001
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Error budget burn rate high"

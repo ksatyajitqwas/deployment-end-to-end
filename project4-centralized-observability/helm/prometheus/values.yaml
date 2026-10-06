@@ -1,0 +1,18 @@
+# Example values for kube-prometheus-stack
+grafana:
+  enabled: true
+  adminPassword: "changeme"
+  persistence:
+    enabled: true
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 50Gi
+alertmanager:
+  enabled: true
