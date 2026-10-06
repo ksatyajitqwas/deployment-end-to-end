@@ -22,6 +22,30 @@ This portfolio shows end-to-end ownership of the problems platform teams solve e
 | Cost / FinOps           | Automated discovery of waste + quantified savings reporting      |
 | Reliability Engineering | Backup automation + tested DR drills + runbooks                  |
 | Security                | Secrets migration, rotation, OIDC, zero secrets in Git           |
+| **CI/CD with gates**    | Plan on every PR · Apply only after human approval               |
+
+---
+
+## CI/CD — Plan on PR, Apply with approval gates
+
+Every project has a dedicated **GitHub Actions** workflow:
+
+| Event | Behavior |
+|-------|----------|
+| **Pull Request** | Validate + security scans + **Terraform plan** (commented on the PR) |
+| **Merge to `main`** | **Apply / Deploy** jobs run only after **GitHub Environment approval** |
+| **Manual dispatch** | Choose environment (`dev` / `staging` / `prod`) |
+
+### How the approval gate works
+
+1. Repo **Settings → Environments** → create `dev`, `staging`, `production`
+2. On `production` (and optionally `staging`) enable **Required reviewers**
+3. Any job with `environment: production` pauses until an approved reviewer clicks **Approve**
+
+Full details: **[docs/CI-AND-APPROVAL-GATES.md](./docs/CI-AND-APPROVAL-GATES.md)**
+
+**Interview line you can use:**
+> "Every infrastructure change is planned on the PR, reviewed in the plan comment, and only applied to production after an explicit approval gate. No one can push straight to prod."
 
 ---
 
@@ -29,7 +53,7 @@ This portfolio shows end-to-end ownership of the problems platform teams solve e
 
 | # | Project | One-line pitch | Interview talking points |
 |---|---------|----------------|--------------------------|
-| **1** | [GitOps EKS Platform](./project1-gitops-eks-platform) | Full platform: Terraform → GitLab CI → ArgoCD → EKS + monitoring | Deploy frequency, lead time, MTTR, automated promotion |
+| **1** | [GitOps EKS Platform](./project1-gitops-eks-platform) | Full platform: Terraform → CI → ArgoCD → EKS + monitoring | Deploy frequency, lead time, MTTR, automated promotion |
 | **2** | [Zero-Downtime Deployments](./project2-zero-downtime-deployments) | Canary / blue-green with automated rollback on failed metrics | "Rollback in < 90s when error rate spikes" |
 | **3** | [Multi-Environment Terraform](./project3-multi-env-terraform) | Reusable modules + remote state + policy checks | IaC maturity beyond "terraform apply once" |
 | **4** | [Centralized Observability](./project4-centralized-observability) | Prometheus + Grafana + Loki + Alertmanager + SLOs | Built observability from scratch, not just used it |
@@ -44,7 +68,8 @@ This portfolio shows end-to-end ownership of the problems platform teams solve e
 1. **Start with Project 1** (GitOps platform) — shows breadth  
 2. **Dive into Project 2 or 3** depending on the role (delivery vs IaC)  
 3. **Highlight Project 4 or 5** if they care about operations / cost  
-4. **Close with Project 6 or 7** to show reliability & security maturity
+4. **Close with Project 6 or 7** to show reliability & security maturity  
+5. **Mention the CI/CD model** (plan on PR + approval gates) — this is often the differentiator
 
 ---
 
@@ -57,26 +82,30 @@ cd deployment-end-to-end
 # Pick any project
 cd project1-gitops-eks-platform
 cat README.md
+
+# See all workflows
+ls .github/workflows/
 ```
 
 Every project contains:
 - Clear README with architecture notes and interview-ready stories
 - Realistic folder structure (Terraform, Helm, CI, runbooks, etc.)
 - Sample manifests / code that demonstrate the concept
+- Path-filtered GitHub Actions with plan → approve → apply
 
 ---
 
 ## Tech stack covered
 
-`Terraform` · `AWS EKS` · `ArgoCD` · `Argo Rollouts` · `GitLab CI` · `Prometheus` · `Grafana` · `Loki` · `Alertmanager` · `Velero` · `AWS Secrets Manager` · `External Secrets` · `Lambda` · `S3` · `DynamoDB` · `tfsec` · `Checkov` · `OIDC`
+`Terraform` · `AWS EKS` · `ArgoCD` · `Argo Rollouts` · `GitHub Actions` · `OIDC` · `Prometheus` · `Grafana` · `Loki` · `Alertmanager` · `Velero` · `AWS Secrets Manager` · `External Secrets` · `Lambda` · `S3` · `DynamoDB` · `tfsec` · `Checkov` · `kubeconform`
 
 ---
 
 ## Note on scope
 
 These are **portfolio / interview demonstration projects**.  
-They intentionally focus on architecture, patterns, and storytelling rather than being fully production-hardened end-to-end systems.  
-The goal is to give interviewers concrete examples they can dig into — not a single monolithic application.
+They intentionally focus on architecture, patterns, and storytelling rather than being fully production-hardened end-to-end systems connected to live AWS accounts.  
+The CI pipelines, approval gates, and folder layouts are production-shaped so you can talk about them confidently.
 
 ---
 
