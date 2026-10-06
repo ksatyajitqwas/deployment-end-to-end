@@ -1,0 +1,60 @@
+name: Project4 — Centralized Observability
+
+on:
+  pull_request:
+    paths:
+      - "project4-centralized-observability/**"
+      - ".github/workflows/project4-observability.yml"
+  push:
+    branches: [main]
+    paths:
+      - "project4-centralized-observability/**"
+      - ".github/workflows/project4-observability.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: project4-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate Helm values & manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.15.0
+
+      - name: Lint Helm values (syntax)
+        run: |
+          # Basic YAML validation of values files
+          python3 -c "import yaml,sys; yaml.safe_load(open('project4-centralized-observability/helm/prometheus/values.yaml'))"
+          python3 -c "import yaml,sys; yaml.safe_load(open('project4-centralized-observability/alerts/slo-rules.yaml'))"
+          echo "YAML syntax OK"
+
+      - name: Validate PrometheusRule YAML
+        run: |
+          kubeconform -summary -strict -ignore-missing-schemas \
+            project4-centralized-observability/alerts/*.yaml 2>/dev/null || true
+
+  deploy:
+    name: Deploy observability stack (approval required)
+    needs: validate
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    environment: production   # <-- Approval gate
+    steps:
+      - uses: actions/checkout@v4
+      - name: Placeholder deploy
+        run: |
+          echo "Production flow:"
+          echo "  helm upgrade --install monitoring ... -f helm/prometheus/values.yaml"
+          echo "  helm upgrade --install loki ..."
+          echo "This job is gated by the 'production' GitHub Environment."

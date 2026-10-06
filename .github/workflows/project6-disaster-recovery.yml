@@ -1,0 +1,65 @@
+name: Project6 — Disaster Recovery
+
+on:
+  pull_request:
+    paths:
+      - "project6-disaster-recovery/**"
+      - ".github/workflows/project6-disaster-recovery.yml"
+  push:
+    branches: [main]
+    paths:
+      - "project6-disaster-recovery/**"
+      - ".github/workflows/project6-disaster-recovery.yml"
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Action to run"
+        required: true
+        default: "validate"
+        type: choice
+        options: [validate, backup-dry-run, restore-drill]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: project6-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate scripts & runbooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shellcheck backup scripts
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          shellcheck project6-disaster-recovery/backup-scripts/*.sh || true
+
+      - name: Check runbook presence
+        run: |
+          test -f project6-disaster-recovery/runbooks/eks-cluster-restore.md
+          test -f project6-disaster-recovery/restore-drills/quarterly-drill.md
+          echo "Runbooks present"
+
+  # Manual / scheduled restore drill (heavily gated)
+  restore-drill:
+    name: Restore drill (requires approval)
+    needs: validate
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'restore-drill'
+    runs-on: ubuntu-latest
+    environment: production   # Strong approval required for DR drills
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute restore drill checklist
+        run: |
+          echo "=== DR Restore Drill ==="
+          cat project6-disaster-recovery/restore-drills/quarterly-drill.md
+          echo ""
+          echo "In a real environment this would:"
+          echo "  1. Select latest Velero backup"
+          echo "  2. Restore into isolated DR cluster/account"
+          echo "  3. Run smoke tests & measure RTO/RPO"
+          echo "  4. Record results"

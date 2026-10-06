@@ -1,0 +1,76 @@
+name: Project5 — Cost Optimization
+
+on:
+  pull_request:
+    paths:
+      - "project5-cost-optimization/**"
+      - ".github/workflows/project5-cost-optimization.yml"
+  push:
+    branches: [main]
+    paths:
+      - "project5-cost-optimization/**"
+      - ".github/workflows/project5-cost-optimization.yml"
+  workflow_dispatch:
+  # Optional: scheduled scan
+  # schedule:
+  #   - cron: '0 8 * * 1'   # Every Monday 08:00 UTC
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: project5-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-lint:
+    name: Lint & unit test Lambda
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: project5-cost-optimization/lambda
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: |
+          pip install boto3 ruff
+
+      - name: Ruff lint
+        run: ruff check scanner.py || true
+
+      - name: Syntax check
+        run: python -m py_compile scanner.py
+
+  terraform-validate:
+    name: Validate scanner Terraform
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: project5-cost-optimization/terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+      - run: terraform init -backend=false
+      - run: terraform validate
+
+  deploy:
+    name: Deploy scanner (approval required)
+    needs: [test-and-lint, terraform-validate]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Placeholder — terraform apply + Lambda deploy
+        run: |
+          echo "Gated by GitHub Environment 'production'."
+          echo "Would run: terraform apply + update Lambda code"
