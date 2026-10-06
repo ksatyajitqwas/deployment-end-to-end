@@ -1,0 +1,3 @@
+# Checkov configuration
+soft-fail: false
+framework: terraform

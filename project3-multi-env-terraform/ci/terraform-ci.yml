@@ -1,0 +1,25 @@
+# Example GitHub Actions / GitLab job
+stages:
+  - validate
+  - plan
+  - apply
+
+validate:
+  script:
+    - terraform fmt -check
+    - terraform validate
+    - tfsec .
+    - checkov -d .
+
+plan:
+  script:
+    - terraform plan -out=tfplan
+  artifacts:
+    paths: [tfplan]
+
+apply:
+  when: manual
+  script:
+    - terraform apply tfplan
+  only:
+    - main
